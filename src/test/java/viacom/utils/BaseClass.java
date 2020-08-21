@@ -33,49 +33,63 @@ public class BaseClass {
 	public static void setUp() {
 		
 		ConfigsReader.readProperties("src/test/resources/configurations/application.properties");
-		String browser=ConfigsReader.getProperty("browser");
-		Reporter.log("Reading the configuration file for browser name");
+		String browser;
+		Boolean logNetworkCalls = false;
+		try {
+			browser= System.getProperty("browser","chrome");
+			if (!browser.isEmpty()) {
+			Reporter.log("Getting browser name from system property (command line) ",true);
+			}
+			logNetworkCalls = !System.getProperty("logNetworkCalls").isEmpty();
+		} 
+		catch (NullPointerException e) {
+			browser = ConfigsReader.getProperty("browser");
+			Reporter.log("Reading the configuration file for browser name",true);
+		}
+		
 
-		 ChromeOptions options = new ChromeOptions();
-		 LoggingPreferences logPrefs = new LoggingPreferences();
-		 logPrefs.enable(LogType.PERFORMANCE, Level.ALL );
-		 options.setCapability( "goog:loggingPrefs", logPrefs );
+		 
+		ChromeOptions chromeOpts = new ChromeOptions();
+		LoggingPreferences logPrefs = new LoggingPreferences();
+		logPrefs.enable(LogType.PERFORMANCE, Level.ALL );
+		chromeOpts.setCapability( "goog:loggingPrefs", logPrefs );
+		
 		
 		if (browser.equalsIgnoreCase("chrome")) {
 			System.setProperty("webdriver.chrome.driver", "src\\test\\resources\\drivers\\chromedriver.exe");
-			driver = new ChromeDriver(options);
-			Reporter.log("Setting up ChromeDriver");
+			driver = new ChromeDriver(chromeOpts);
+			Reporter.log("Setting up ChromeDriver",true);
 		} else if (browser.equalsIgnoreCase("firefox")) {
 			System.setProperty("webdriver.gecko.driver", "src\\test\\resources\\drivers\\geckodriver.exe");
 			driver = new FirefoxDriver();
-			Reporter.log("Setting up FireFoxDriver");
+			Reporter.log("Setting up FireFoxDriver",true);
 		}  else if (browser.equalsIgnoreCase("edge")) {
 			System.setProperty("webdriver.edge.driver", "src\\test\\resources\\drivers\\msedgedriver.exe");
 			driver = new EdgeDriver();
-			Reporter.log("Setting up EdgeDriver");
+			Reporter.log("Setting up EdgeDriver",true);
 		} else {
 			System.out.println("browser given is wrong: " + browser);
-			Reporter.log("Error in Setting up WebDriver" + browser);
+			Reporter.log("Error in Setting up WebDriver" + browser,true);
 		}
 		driver.manage().timeouts().implicitlyWait(20, TimeUnit.SECONDS);
 		driver.manage().timeouts().pageLoadTimeout(30, TimeUnit.SECONDS);
 		driver.manage().window().maximize();
+		Reporter.log("Visiting the URL: " + ConfigsReader.getProperty("url"),true);
 		driver.get(ConfigsReader.getProperty("url"));
-		Reporter.log("Visiting the URL: " + ConfigsReader.getProperty("url"));
 		
+		if (browser.equalsIgnoreCase("chrome") && logNetworkCalls) {
+			performNetworkLogging(driver); }
 		
-		
-		
+	}
+	
+	private static void performNetworkLogging(WebDriver driver) {
 		List<LogEntry> entries = driver.manage().logs().get(LogType.PERFORMANCE).getAll();
 
 		List<LogEntry> filtered = entries.stream()
 				.filter(e -> e.toString().contains("http://sc.cc.com"))
 	            .collect(Collectors.toList());
-		
-		
 
 		for (LogEntry entry : entries) {
-//		    System.out.println(new Date(entry.getTimestamp()) + " " + entry.getLevel() + " " + entry.getMessage());
 		    if(entry.toString().contains("\"url\":\"http://sc.cc.com/")) {
 		    	System.out.println(new Date(entry.getTimestamp()) + " " + entry.getLevel() + " " + entry.getMessage());
 		    }
@@ -91,7 +105,7 @@ public class BaseClass {
 		System.out.println("Total calls that have domain http://sc.cc.com: " + filtered.size());
 		
 	}
-	
+
 	@AfterMethod(alwaysRun=true)
 	public void tearUp() {
 		driver.quit();
