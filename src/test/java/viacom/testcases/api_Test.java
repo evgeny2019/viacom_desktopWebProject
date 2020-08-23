@@ -1,6 +1,7 @@
 package viacom.testcases;
 
 import org.testng.Assert;
+import org.testng.Reporter;
 import org.testng.annotations.Listeners;
 import org.testng.annotations.Test;
 
@@ -29,7 +30,7 @@ public class api_Test {
 	public void viacomApi_GET () {
 		
 		baseURI = "https://neutron-api.viacom.tech/feeds/networkapp/intl/main/2.3";
-		
+	Reporter.log("sending the HTTP GET request to endpoint, printing and validating the response", true);	
 	ValidatableResponse resp = RestAssured.given()
 		.param ("key", "networkapp1.0")
 		.param ("brand", "betplus")
@@ -55,19 +56,22 @@ public class api_Test {
 			.getJSONObject("appConfiguration")
 			.getJSONArray("searchTypes");	
 	Assert.assertEquals(searchTypes.getString(0), "series");
-	
+	Reporter.log("asserting the field contains word \"series\" (using JSONArray)", true);	
+
 	// Another way of parsing the response body to Java structure (Map)
 	Map<Object, Object> parsedResponse = resp.extract().jsonPath().get("data.appConfiguration");
 	
 	//the third way to validate that field contains word "series"
 	ArrayList<String> var = ((ArrayList<String>) parsedResponse.get("searchTypes"));
 	Assert.assertTrue(var.contains("series"));
+	Reporter.log("asserting the field contains word \"series\" (using JsonPath/Map/ArrayList)", true);	
 	
 	// most thorough (and complicated) way of parsing the response into Java structure, where EACH field from heavily nested json object is parsed (got a template from one of the sites)
 	Map <String,Object> totallyParsedResponse = jsonToMap(obj);
 	
 	ArrayList<String> var1 = (ArrayList<String>) ((Map<String,Object>) ((Map<String,Object>) totallyParsedResponse.get("data")).get("appConfiguration")).get("searchTypes");
 	Assert.assertTrue(var1.contains("series"));
+	Reporter.log("asserting the field contains word \"series\" (using custom function jsonToMap)", true);	
 	}
 
 	// helper methods for parsing the json object to java object
